@@ -1,18 +1,28 @@
+// routes/policyRoutes.js (UPDATED)
 import express from 'express';
-import {
-  createPolicy,
-  getAllPolicies,
-  getPolicyPreview,
-  finalizePolicy,
-  updatePolicy
-} from '../controllers/policyController.js';
 
-const router = express.Router();
+// This file now exports a function that accepts 'db' as an argument
+const policyRoutes = (db) => {
+  const router = express.Router();
 
-router.post('/', createPolicy);                          // Manually create policy
-router.get('/', getAllPolicies);                         // All policies
-router.get('/preview/:id', getPolicyPreview);            // Preview from confirmation
-router.post('/finalize/:id', finalizePolicy);            // Finalize + move
-router.put('/:id', updatePolicy);                        // Update policy
+  // Import controller functions here, so they can be configured with 'db'
+  // We will make these controller functions into functions that accept 'db'
+  // and return the actual handler.
+  const {
+    createPolicy,
+    getAllPolicies,
+    getPolicyPreview,
+    finalizePolicy,
+    updatePolicy
+  } = require('../controllers/policyController.js')(db); // <-- CHANGED: Pass db here
 
-export default router;
+  router.post('/', createPolicy);
+  router.get('/', getAllPolicies);
+  router.get('/preview/:id', getPolicyPreview);
+  router.post('/finalize/:id', finalizePolicy);
+  router.put('/:id', updatePolicy);
+
+  return router;
+};
+
+export default policyRoutes; // <-- CHANGED: Export the function

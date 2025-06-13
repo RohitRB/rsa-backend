@@ -4,9 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 // import connectDB from './config/db.js';
 import connectFirebase from './config/firebase.js';
-import customerRoutes from './routes/customerRoutes.js'; // Will need to change how this is imported
+import customerRoutes from './routes/customerRoutes.js';
 import confirmationRoutes from './routes/confirmationRoutes.js';
-import policyRoutes from './routes/policyRoutes.js';
+import policyRoutes from './routes/policyRoutes.js'; // Will need to change how this is imported
 import Razorpay from 'razorpay';
 
 
@@ -49,10 +49,10 @@ app.get('/', (req, res) => {
 });
 
 // Pass the 'db' instance to your route modules
-app.use('/api/customers', customerRoutes(db)); // <-- CHANGED: Pass db to the router initialization
-// We will need to update confirmationRoutes and policyRoutes similarly when we refactor them.
+app.use('/api/customers', customerRoutes(db));
+app.use('/api/policies', policyRoutes(db)); // <-- CHANGED: Pass db to the router initialization for policies
+// We will need to update confirmationRoutes similarly when we refactor it.
 app.use('/api/confirmations', confirmationRoutes); // Keep for now
-app.use('/api/policies', policyRoutes); // Keep for now
 
 
 const PORT = process.env.PORT || 5000;
