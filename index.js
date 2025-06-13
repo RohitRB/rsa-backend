@@ -1,15 +1,19 @@
+// index.js
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import connectDB from './config/db.js';
+// import connectDB from './config/db.js'; // <-- COMMENTED OUT / REMOVED: No longer using MongoDB connection
+import connectFirebase from './config/firebase.js'; // <-- ADDED: Import Firebase connection
 import customerRoutes from './routes/customerRoutes.js';
-import confirmationRoutes from './routes/confirmationRoutes.js';  
+import confirmationRoutes from './routes/confirmationRoutes.js';
 import policyRoutes from './routes/policyRoutes.js';
 import Razorpay from 'razorpay';
 
 
 dotenv.config();
-connectDB();
+
+// <-- CHANGED: Replaced MongoDB connection with Firebase initialization
+const db = connectFirebase(); // This will initialize Firebase Admin SDK and return the Firestore instance
 
 const app = express();
 app.use(cors());
@@ -32,7 +36,7 @@ app.post('/create-order', async (req, res) => {
     }
 
     const options = {
-      amount: amount * 100, 
+      amount: amount * 100,
       currency: 'INR',
       receipt: `receipt_order_${Date.now()}`,
     };
@@ -47,7 +51,8 @@ app.post('/create-order', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('Razorpay backend is running!');
+  // <-- UPDATED: Changed message to reflect Firebase backend
+  res.send('Firebase backend is running!');
 });
 
 
