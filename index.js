@@ -3,16 +3,17 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 // import connectDB from './config/db.js';
-import connectFirebase from './config/firebase.js';
+import db from './config/firebase.js'; // <-- CHANGED: Import db directly
 import customerRoutes from './routes/customerRoutes.js';
 import confirmationRoutes from './routes/confirmationRoutes.js';
-import policyRoutes from './routes/policyRoutes.js'; // Will need to change how this is imported
+import policyRoutes from './routes/policyRoutes.js';
 import Razorpay from 'razorpay';
 
 
 dotenv.config();
 
-const db = connectFirebase(); // 'db' is your Firestore instance
+// The Firebase Admin SDK is now initialized and 'db' is available via import
+// const db = connectFirebase(); // <-- REMOVED: No longer call connectFirebase here
 
 const app = express();
 app.use(cors());
@@ -48,11 +49,10 @@ app.get('/', (req, res) => {
   res.send('Firebase backend is running!');
 });
 
-// Pass the 'db' instance to your route modules
-app.use('/api/customers', customerRoutes(db));
-app.use('/api/policies', policyRoutes(db)); // <-- CHANGED: Pass db to the router initialization for policies
-// We will need to update confirmationRoutes similarly when we refactor it.
-app.use('/api/confirmations', confirmationRoutes); // Keep for now
+// Use routes directly, as 'db' is now imported within controllers
+app.use('/api/customers', customerRoutes); // <-- CHANGED: No longer pass db here
+app.use('/api/policies', policyRoutes);   // <-- CHANGED: No longer pass db here
+app.use('/api/confirmations', confirmationRoutes);
 
 
 const PORT = process.env.PORT || 5000;

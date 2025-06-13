@@ -1,30 +1,19 @@
-// routes/customerRoutes.js (UPDATED)
+// routes/customerRoutes.js (UPDATED - Reverted to simpler structure)
 import express from 'express';
-// We will move the imports for the controller functions inside the function
-// to ensure they receive the 'db' instance.
+import { // <-- CHANGED: Direct import of functions
+  createCustomer,
+  getCustomers,
+  getCustomerById,
+  updateCustomer,
+  deleteCustomer
+} from '../controllers/customerController.js'; // <-- CHANGED: No longer passing db here
 
-// This file now exports a function that accepts 'db' as an argument
-const customerRoutes = (db) => {
-  const router = express.Router();
+const router = express.Router();
 
-  // Import controller functions here, so they can be configured with 'db'
-  // We will make these controller functions into functions that accept 'db'
-  // and return the actual handler.
-  const {
-    createCustomer,
-    getCustomers,
-    getCustomerById,
-    updateCustomer,
-    deleteCustomer
-  } = require('../controllers/customerController.js')(db); // <-- CHANGED: Pass db here
+router.post('/create', createCustomer);
+router.get('/', getCustomers);
+router.get('/:id', getCustomerById);
+router.put('/:id', updateCustomer);
+router.delete('/:id', deleteCustomer);
 
-  router.post('/create', createCustomer);
-  router.get('/', getCustomers);
-  router.get('/:id', getCustomerById);
-  router.put('/:id', updateCustomer);
-  router.delete('/:id', deleteCustomer);
-
-  return router;
-};
-
-export default customerRoutes; // <-- CHANGED: Export the function
+export default router; // <-- CHANGED: Export the router directly
