@@ -1,4 +1,4 @@
-// controllers/confirmationController.js (UPDATED)
+// controllers/confirmationController.js (UPDATED - Complete replacement)
 import db from '../config/firebase.js'; // <-- ADDED: Import db directly
 import { v4 as uuidv4 } from 'uuid'; // Keep UUID for policy number generation
 
@@ -9,7 +9,7 @@ const customersCollection = db.collection('customers'); // Need this to fetch cu
 export const createConfirmation = async (req, res) => {
   try {
     const { policyType, amount, expiryDate, customerId } = req.body;
-    const policyNumber = 'RSA-' + uuidv4().split('-')[0].toUpperCase();
+    let policyNumber = 'RSA-' + uuidv4().split('-')[0].toUpperCase(); // Use let to allow regeneration
 
     // Validate required fields
     if (!policyType || !amount || !expiryDate || !customerId) {
@@ -33,14 +33,24 @@ export const createConfirmation = async (req, res) => {
       updatedAt: new Date()  // Manually add timestamp
     };
 
-    // Check for unique policyNumber before creating
-    const existingConfirmation = await confirmationsCollection.where('policyNumber', '==', newConfirmationData.policyNumber).limit(1).get();
-    if (!existingConfirmation.empty) {
-        // If a duplicate is found, try generating a new policyNumber and retry (or handle as preferred)
-        newConfirmationData.policyNumber = 'RSA-' + uuidv4().split('-')[0].toUpperCase(); // Regenerate
-        console.warn('Duplicate policy number, regenerating:', newConfirmationData.policyNumber);
+    // Check for unique policyNumber before creating (simple retry for uniqueness)
+    // In a production app, you might want a more robust unique ID generation or transaction.
+    let attempt = 0;
+    const MAX_ATTEMPTS = 5; // To prevent infinite loops in case of very high collision rate
+    while (attempt < MAX_ATTEMPTS) {
+        const existingConfirmation = await confirmationsCollection.where('policyNumber', '==', newConfirmationData.policyNumber).limit(1).get();
+        if (existingConfirmation.empty) {
+            break; // Unique policyNumber found
+        }
+        // If not unique, regenerate and try again
+        newConfirmationData.policyNumber = 'RSA-' + uuidv4().split('-')[0].toUpperCase();
+        console.warn(`Duplicate policy number '${policyNumber}' found, regenerating to '${newConfirmationData.policyNumber}'`);
+        policyNumber = newConfirmationData.policyNumber; // Update original variable as well
+        attempt++;
+        if (attempt === MAX_ATTEMPTS) {
+             return res.status(500).json({ error: 'Failed to generate a unique policy number after multiple attempts.' });
+        }
     }
-
 
     const docRef = await confirmationsCollection.add(newConfirmationData); // Add new document
     const savedConfirmation = { id: docRef.id, ...newConfirmationData }; // Include Firestore-generated ID
@@ -64,10 +74,12 @@ export const getAllConfirmations = async (req, res) => {
       if (confirmationData.customerId) {
         const customerDoc = await customersCollection.doc(confirmationData.customerId).get();
         if (customerDoc.exists) {
-          confirmationData.customerId = { id: customerDoc.id, ...customerDoc.data() }; // Replace ID with full customer object
+          confirmationData.customerDetails = { id: customerDoc.id, ...customerDoc.data() }; // Use customerDetails or similar key
+          // You might want to remove the raw customerId if you only want the populated data
+          // delete confirmationData.customerId;
         } else {
-          // If customer not found, you might want to log a warning or set customerId to null/undefined
-          confirmationData.customerId = null; // Or handle as per your app's logic
+          // If customer not found, set customerDetails to null and keep customerId
+          confirmationData.customerDetails = null;
         }
       }
       confirmations.push(confirmationData);
@@ -95,9 +107,10 @@ export const getConfirmationById = async (req, res) => {
     if (confirmationData.customerId) {
       const customerDoc = await customersCollection.doc(confirmationData.customerId).get();
       if (customerDoc.exists) {
-        confirmationData.customerId = { id: customerDoc.id, ...customerDoc.data() }; // Replace ID with full customer object
+        confirmationData.customerDetails = { id: customerDoc.id, ...customerDoc.data() }; // Use customerDetails
+        // delete confirmationData.customerId;
       } else {
-        confirmationData.customerId = null;
+        confirmationData.customerDetails = null;
       }
     }
     res.status(200).json(confirmationData);
@@ -113,14 +126,13 @@ export const updateConfirmation = async (req, res) => {
     const confirmationId = req.params.id;
     const updates = { ...req.body, updatedAt: new Date() }; // Add update timestamp
 
-    // Ensure customerId is not updated or validated if present
+    // If customerId is being updated, validate it
     if (updates.customerId) {
         const customerDoc = await customersCollection.doc(updates.customerId).get();
         if (!customerDoc.exists) {
             return res.status(404).json({ message: 'Provided customerId for update does not exist.' });
         }
     }
-
 
     const confirmationDocRef = confirmationsCollection.doc(confirmationId);
     const confirmationDoc = await confirmationDocRef.get();
@@ -138,9 +150,9 @@ export const updateConfirmation = async (req, res) => {
     if (updatedConfirmationData.customerId) {
       const customerDoc = await customersCollection.doc(updatedConfirmationData.customerId).get();
       if (customerDoc.exists) {
-        updatedConfirmationData.customerId = { id: customerDoc.id, ...customerDoc.data() };
+        updatedConfirmationData.customerDetails = { id: customerDoc.id, ...customerDoc.data() };
       } else {
-        updatedConfirmationData.customerId = null;
+        updatedConfirmationData.customerDetails = null;
       }
     }
 
