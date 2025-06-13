@@ -1,3 +1,4 @@
+// routes/confirmationRoutes.js (No changes needed, already correct structure)
 import express from 'express';
 import {
   createConfirmation,
