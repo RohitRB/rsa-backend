@@ -1,4 +1,4 @@
-// index.js (UPDATED with Payment Verification and Firestore Saving)
+// index.js (UPDATED with Payment Verification and Firestore Saving, Razorpay Keys from Env)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -15,13 +15,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Razorpay setup
+// Razorpay setup - CRITICAL: Using environment variables now
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID, // Use environment variable for key_id
   key_secret: process.env.RAZORPAY_KEY_SECRET, // Use environment variable for key_secret
 });
 
 // IMPORTANT: Define environment variables RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Render/Vercel backend
+// For your reference (DO NOT hardcode in file):
 // RAZORPAY_KEY_ID = rzp_live_yYGWUPovOauhOx
 // RAZORPAY_KEY_SECRET = m5wQh8cIXTJ92UJeoHhwtLxa
 
@@ -44,7 +45,7 @@ app.post('/create-order', async (req, res) => {
     res.json(order);
   } catch (error) {
     console.error('❌ Failed to create Razorpay order:', error);
-    res.status(500).json({ error: 'Something went wrong on the server' });
+    res.status(500).json({ error: `Something went wrong on the server: ${error.message}` });
   }
 });
 
@@ -68,7 +69,7 @@ app.post('/api/payments/verify-and-save', async (req, res) => {
   // --- 1. Verify Payment Signature ---
   try {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET) // Use environment variable
                                 .update(body.toString())
                                 .digest('hex');
 
