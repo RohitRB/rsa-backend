@@ -1,17 +1,39 @@
-// config/firebase.js (UPDATED - Critical Change)
+// config/firebase.js (UPDATED - Supports both local file and environment variable)
 import admin from 'firebase-admin';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 let db; // Declare db outside to be accessible after initialization
 
 // This function will initialize the Firebase Admin SDK
 const connectFirebase = () => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      console.error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Please add it to Render.');
-      process.exit(1);
-    }
+    let serviceAccount;
 
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    // Check if environment variable is set (for production)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      console.log('Using Firebase service account from environment variable');
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    } 
+    // Check if local JSON file exists (for development)
+    else {
+      const serviceAccountPath = join(__dirname, '..', 'kalyan-rsa-backend-firebase-adminsdk-fbsvc-af5b9f8c2e.json');
+      if (fs.existsSync(serviceAccountPath)) {
+        console.log('Using Firebase service account from local JSON file');
+        const serviceAccountFile = fs.readFileSync(serviceAccountPath, 'utf8');
+        serviceAccount = JSON.parse(serviceAccountFile);
+      } else {
+        console.error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set and local JSON file not found.');
+        console.error('Please either:');
+        console.error('1. Set FIREBASE_SERVICE_ACCOUNT_KEY environment variable, or');
+        console.error('2. Place the Firebase service account JSON file in the project root');
+        process.exit(1);
+      }
+    }
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
@@ -25,7 +47,7 @@ const connectFirebase = () => {
   } catch (error) {
     console.error('❌ Firebase Admin SDK initialization failed:', error);
     if (error instanceof SyntaxError && error.message.includes('JSON')) {
-        console.error('Attempted to parse:', process.env.FIREBASE_SERVICE_ACCOUNT_KEY ? process.env.FIREBASE_SERVICE_ACCOUNT_KEY.substring(0, 200) + '...' : ' (No value found)');
+        console.error('JSON parsing error. Please check your service account configuration.');
     }
     process.exit(1);
   }
@@ -35,4 +57,4 @@ const connectFirebase = () => {
 connectFirebase();
 
 // Export the 'db' instance directly
-export default db; // <-- CHANGED: Export the initialized Firestore instance
+export default db;
