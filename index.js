@@ -122,6 +122,8 @@ app.post('/api/payments/verify-and-save', async (req, res) => {
     const newPolicyEntry = {
       ...policyData, // Use the policyData passed from frontend
       customerId: customerDocRef.id, // Link policy to customer
+      customerName: customerData.customerName,
+      vehicleNumber: customerData.vehicleNumber,
       razorpay_payment_id,
       razorpay_order_id,
       status: 'Active', // Explicitly set status to Active on successful payment
@@ -155,6 +157,75 @@ app.post('/api/payments/verify-and-save', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.send('Firebase backend is running!');
+});
+
+// Admin Dashboard endpoint
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    const policiesCollection = db.collection('policies');
+    const customersCollection = db.collection('customers');
+    
+    // Get all policies and customers
+    const policiesSnapshot = await policiesCollection.get();
+    const customersSnapshot = await customersCollection.get();
+    
+    const policies = [];
+    const customers = [];
+    
+    policiesSnapshot.forEach(doc => {
+      policies.push({ id: doc.id, ...doc.data() });
+    });
+    
+    customersSnapshot.forEach(doc => {
+      customers.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Calculate stats
+    const today = new Date();
+    const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+    
+    const activePolicies = policies.filter(policy => 
+      policy.status === 'Active' && 
+      new Date(policy.expiryDate) > today
+    );
+    
+    const expiringPolicies = policies.filter(policy => {
+      const expiryDate = new Date(policy.expiryDate);
+      return expiryDate > today && expiryDate <= thirtyDaysFromNow;
+    });
+    
+    const expiredPolicies = policies.filter(policy => 
+      new Date(policy.expiryDate) <= today
+    );
+    
+    // Get recent policies (last 5)
+    const recentPolicies = policies
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map(policy => ({
+        _id: policy.id,
+        policyId: policy.policyNumber || policy.id,
+        customerName: policy.customerName || 'N/A',
+        vehicleNumber: policy.vehicleNumber || 'N/A',
+        startDate: policy.startDate || new Date(),
+        expiryDate: policy.expiryDate || new Date(),
+        status: policy.status || 'Active'
+      }));
+    
+    const dashboardData = {
+      totalPolicies: policies.length,
+      activePolicies: activePolicies.length,
+      expiringPolicies: expiringPolicies.length,
+      expiredPolicies: expiredPolicies.length,
+      totalCustomers: customers.length,
+      recentPolicies: recentPolicies
+    };
+    
+    res.json(dashboardData);
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
 });
 
 // Use routes directly, as 'db' is now imported within controllers
