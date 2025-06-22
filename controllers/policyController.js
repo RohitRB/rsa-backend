@@ -1,13 +1,16 @@
 // controllers/policyController.js (UPDATED)
 import db from '../config/firebase.js'; // <-- CHANGED: Import db directly here
 
-const policiesCollection = db.collection('policies');
-const customersCollection = db.collection('customers');
-const confirmationsCollection = db.collection('confirmations');
-
 // ✅ 1. Manually Create Policy
 export const createPolicy = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
     console.log('creating policy ');
 
     const newPolicyData = {
@@ -45,6 +48,13 @@ export const createPolicy = async (req, res) => { // <-- CHANGED: Export directl
 // ✅ 2. Get all finalized policies
 export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
     const snapshot = await policiesCollection.orderBy('createdAt', 'desc').get();
     const policies = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -60,6 +70,15 @@ export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export direc
 // ✅ 3. Get policy preview by confirmation ID (used before finalize)
 export const getPolicyPreview = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     const confirmationId = req.params.id;
     const confirmationDoc = await confirmationsCollection.doc(confirmationId).get();
 
@@ -106,6 +125,16 @@ export const getPolicyPreview = async (req, res) => { // <-- CHANGED: Export dir
 // ✅ 4. Finalize: Move from Confirmation → Policy (archive style)
 export const finalizePolicy = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     console.log("📥 Finalizing policy...");
 
     const confirmationId = req.params.id;
@@ -165,6 +194,13 @@ export const finalizePolicy = async (req, res) => { // <-- CHANGED: Export direc
 // ✅ 5. Update policy by ID
 export const updatePolicy = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
     const policyId = req.params.id;
     const updates = { ...req.body, updatedAt: new Date() };
 

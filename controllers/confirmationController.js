@@ -2,12 +2,18 @@
 import db from '../config/firebase.js'; // <-- ADDED: Import db directly
 import { v4 as uuidv4 } from 'uuid'; // Keep UUID for policy number generation
 
-const confirmationsCollection = db.collection('confirmations');
-const customersCollection = db.collection('customers'); // Need this to fetch customer details for populate logic
-
 // Create confirmation
 export const createConfirmation = async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     const { policyType, amount, expiryDate, customerId } = req.body;
     let policyNumber = 'RSA-' + uuidv4().split('-')[0].toUpperCase(); // Use let to allow regeneration
 
@@ -65,6 +71,15 @@ export const createConfirmation = async (req, res) => {
 // Get all confirmations
 export const getAllConfirmations = async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     const snapshot = await confirmationsCollection.orderBy('paymentDate', 'desc').get(); // Sort by payment date, latest first
     const confirmations = [];
 
@@ -94,6 +109,15 @@ export const getAllConfirmations = async (req, res) => {
 // Get confirmation by ID
 export const getConfirmationById = async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     const confirmationId = req.params.id;
     const confirmationDoc = await confirmationsCollection.doc(confirmationId).get();
 
@@ -123,6 +147,15 @@ export const getConfirmationById = async (req, res) => {
 // Update confirmation
 export const updateConfirmation = async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
+    const customersCollection = db.collection('customers');
+    
     const confirmationId = req.params.id;
     const updates = { ...req.body, updatedAt: new Date() }; // Add update timestamp
 
@@ -166,6 +199,13 @@ export const updateConfirmation = async (req, res) => {
 // Delete confirmation
 export const deleteConfirmation = async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const confirmationsCollection = db.collection('confirmations');
     const confirmationId = req.params.id;
     const confirmationDocRef = confirmationsCollection.doc(confirmationId);
     const confirmationDoc = await confirmationDocRef.get();

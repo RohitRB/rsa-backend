@@ -1,11 +1,16 @@
 // controllers/customerController.js (UPDATED)
 import db from '../config/firebase.js'; // <-- CHANGED: Import db directly here
 
-const customersCollection = db.collection('customers'); // Reference to your Firestore collection
-
 // Create a new customer
 export const createCustomer = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const customersCollection = db.collection('customers');
     const newCustomerData = {
       customerName: req.body.customerName,
       email: req.body.email,
@@ -34,6 +39,13 @@ export const createCustomer = async (req, res) => { // <-- CHANGED: Export direc
 // Get all customers
 export const getCustomers = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const customersCollection = db.collection('customers');
     const snapshot = await customersCollection.orderBy('createdAt', 'desc').get();
     const customers = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -49,6 +61,13 @@ export const getCustomers = async (req, res) => { // <-- CHANGED: Export directl
 // Get single customer by ID
 export const getCustomerById = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const customersCollection = db.collection('customers');
     const customerId = req.params.id;
     const customerDoc = await customersCollection.doc(customerId).get();
 
@@ -66,6 +85,13 @@ export const getCustomerById = async (req, res) => { // <-- CHANGED: Export dire
 // Update customer
 export const updateCustomer = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const customersCollection = db.collection('customers');
     const customerId = req.params.id;
     const updates = { ...req.body, updatedAt: new Date() };
 
@@ -89,6 +115,13 @@ export const updateCustomer = async (req, res) => { // <-- CHANGED: Export direc
 // Delete customer
 export const deleteCustomer = async (req, res) => { // <-- CHANGED: Export directly
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const customersCollection = db.collection('customers');
     const customerId = req.params.id;
     const customerDocRef = customersCollection.doc(customerId);
     const customerDoc = await customerDocRef.get();
