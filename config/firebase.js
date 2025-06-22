@@ -7,7 +7,7 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-let db; // Declare db outside to be accessible after initialization
+let db = null; // Declare db outside to be accessible after initialization
 
 // This function will initialize the Firebase Admin SDK
 const connectFirebase = () => {
@@ -31,7 +31,9 @@ const connectFirebase = () => {
         console.error('Please either:');
         console.error('1. Set FIREBASE_SERVICE_ACCOUNT_KEY environment variable, or');
         console.error('2. Place the Firebase service account JSON file in the project root');
-        process.exit(1);
+        console.error('The app will start but database features will be disabled.');
+        // Don't exit - let the app start for health checks
+        return;
       }
     }
 
@@ -49,7 +51,8 @@ const connectFirebase = () => {
     if (error instanceof SyntaxError && error.message.includes('JSON')) {
         console.error('JSON parsing error. Please check your service account configuration.');
     }
-    process.exit(1);
+    console.error('The app will start but database features will be disabled.');
+    // Don't exit - let the app start for health checks
   }
 };
 

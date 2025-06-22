@@ -22,15 +22,20 @@ const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 // Check if Razorpay keys are available
 if (!razorpayKeyId || !razorpayKeySecret) {
   console.error('❌ Razorpay keys are missing. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
-  process.exit(1);
+  console.error('The app will start but payment features will be disabled.');
+  // Don't exit - let the app start for health checks
 }
 
-const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
-  key_secret: razorpayKeySecret,
-});
-
-console.log('✅ Razorpay initialized successfully');
+let razorpay = null;
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpay = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret,
+  });
+  console.log('✅ Razorpay initialized successfully');
+} else {
+  console.log('⚠️ Razorpay not initialized - payment features disabled');
+}
 
 // IMPORTANT: Define environment variables RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Railway
 // DO NOT hardcode these values in the source code
@@ -39,6 +44,12 @@ console.log('✅ Razorpay initialized successfully');
 // Existing /create-order endpoint (creates a Razorpay order, sends amount in paisa)
 app.post('/create-order', async (req, res) => {
   try {
+    if (!razorpay) {
+      return res.status(503).json({ 
+        error: 'Payment service is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.' 
+      });
+    }
+
     const { amount } = req.body; // Amount received in Rupees from frontend
     if (!amount || isNaN(amount)) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -60,23 +71,37 @@ app.post('/create-order', async (req, res) => {
 
 // NEW: Endpoint to verify payment and save policy/customer to Firestore
 app.post('/api/payments/verify-and-save', async (req, res) => {
-  console.log('Received verification request:', req.body);
-  const {
-    razorpay_payment_id,
-    razorpay_order_id,
-    razorpay_signature,
-    policyData, // Full policy object from frontend
-    customerData // Full customer object from frontend
-  } = req.body;
-
-  // Basic validation
-  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !policyData || !customerData) {
-    console.log('Missing verification fields');
-    return res.status(400).json({ success: false, message: 'Missing payment verification details or policy/customer data.' });
-  }
-
-  // --- 1. Verify Payment Signature ---
   try {
+    if (!razorpay) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Payment service is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.' 
+      });
+    }
+
+    if (!db) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    console.log('Received verification request:', req.body);
+    const {
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+      policyData, // Full policy object from frontend
+      customerData // Full customer object from frontend
+    } = req.body;
+
+    // Basic validation
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !policyData || !customerData) {
+      console.log('Missing verification fields');
+      return res.status(400).json({ success: false, message: 'Missing payment verification details or policy/customer data.' });
+    }
+
+    // --- 1. Verify Payment Signature ---
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto.createHmac('sha256', razorpayKeySecret) // Use the same variable
                   .update(body.toString())
@@ -160,6 +185,12 @@ app.get('/', (req, res) => {
 // Admin Dashboard endpoint
 app.get('/api/dashboard', async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
     const policiesCollection = db.collection('policies');
     const customersCollection = db.collection('customers');
     
