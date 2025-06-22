@@ -15,14 +15,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Razorpay setup - CRITICAL: Using environment variables now
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_yYGWUPovOauhOx';
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || 'm5wQh8cIXTJ92UJeoHhwtLxa';
+// Razorpay setup - CRITICAL: Using environment variables only
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
 // Check if Razorpay keys are available
 if (!razorpayKeyId || !razorpayKeySecret) {
   console.error('❌ Razorpay keys are missing. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
-  console.error('For development, you can use the default keys provided in the code.');
+  process.exit(1);
 }
 
 const razorpay = new Razorpay({
@@ -30,12 +30,10 @@ const razorpay = new Razorpay({
   key_secret: razorpayKeySecret,
 });
 
-console.log('✅ Razorpay initialized with key_id:', razorpayKeyId);
+console.log('✅ Razorpay initialized successfully');
 
-// IMPORTANT: Define environment variables RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Render/Vercel backend
-// For your reference (DO NOT hardcode in file):
-// RAZORPAY_KEY_ID = rzp_live_yYGWUPovOauhOx
-// RAZORPAY_KEY_SECRET = m5wQh8cIXTJ92UJeoHhwtLxa
+// IMPORTANT: Define environment variables RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on Railway
+// DO NOT hardcode these values in the source code
 
 
 // Existing /create-order endpoint (creates a Razorpay order, sends amount in paisa)

@@ -3,6 +3,10 @@
 
 # Environment variables
 .env
+env.local
+
+# Firebase service account key
+kalyan-rsa-backend-firebase-adminsdk-fbsvc-af5b9f8c2e.json
 
 # Build outputs
 /dist
