@@ -64,7 +64,7 @@ VITE_APP_BACKEND_URL=http://localhost:5000
 VITE_APP_FIREBASE_CONFIG={"apiKey":"your-api-key","authDomain":"kalyan-rsa-backend.firebaseapp.com","projectId":"kalyan-rsa-backend","storageBucket":"kalyan-rsa-backend.appspot.com","messagingSenderId":"123456789","appId":"your-app-id"}
 
 # Razorpay Configuration
-VITE_APP_RAZORPAY_KEY_ID=rzp_live_yYGWUPovOauhOx
+VITE_APP_RAZORPAY_KEY_ID=your_razorpay_key_id_here
 
 # EmailJS Configuration
 VITE_APP_EMAILJS_USER_ID=your_emailjs_user_id
