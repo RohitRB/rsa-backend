@@ -220,3 +220,34 @@ export const updatePolicy = async (req, res) => { // <-- CHANGED: Export directl
     res.status(500).json({ error: err.message });
   }
 };
+
+// ✅ 6. Delete policy by ID
+export const deletePolicy = async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
+    const policyId = req.params.id;
+
+    const policyDocRef = policiesCollection.doc(policyId);
+    const policyDoc = await policyDocRef.get();
+
+    if (!policyDoc.exists) {
+      return res.status(404).json({ message: 'Policy not found' });
+    }
+
+    await policyDocRef.delete();
+
+    res.status(200).json({ 
+      message: 'Policy deleted successfully',
+      deletedPolicyId: policyId 
+    });
+  } catch (err) {
+    console.error('Error deleting policy:', err);
+    res.status(500).json({ error: err.message });
+  }
+};

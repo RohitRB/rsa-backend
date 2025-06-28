@@ -5,7 +5,8 @@ import { // <-- CHANGED: Direct import of functions
   getAllPolicies,
   getPolicyPreview,
   finalizePolicy,
-  updatePolicy
+  updatePolicy,
+  deletePolicy
 } from '../controllers/policyController.js'; // <-- CHANGED: No longer passing db here
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.get('/', getAllPolicies);
 router.get('/preview/:id', getPolicyPreview);
 router.post('/finalize/:id', finalizePolicy);
 router.put('/:id', updatePolicy);
+router.delete('/:id', deletePolicy);
 
 export default router; // <-- CHANGED: Export the router directly
