@@ -61,6 +61,8 @@ export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export direc
     }
 
     const policiesCollection = db.collection('policies');
+    const customersCollection = db.collection('customers');
+    
     // Get all policies and filter active ones in memory to avoid index requirement
     const snapshot = await policiesCollection
       .orderBy('createdAt', 'desc')
@@ -73,7 +75,46 @@ export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export direc
       }))
       .filter(policy => policy.status === 'Active'); // Filter active policies in memory
     
-    res.status(200).json(policies);
+    // Fetch customer details for each policy
+    const policiesWithCustomerDetails = await Promise.all(
+      policies.map(async (policy) => {
+        let customerDetails = {
+          customerName: policy.customerName || 'N/A',
+          phoneNumber: policy.customerNumber || policy.phoneNumber || 'N/A',
+          email: 'N/A',
+          address: 'N/A',
+          city: 'N/A',
+          amount: policy.amount || 'N/A'
+        };
+
+        // Try to fetch customer details if customerId exists
+        if (policy.customerId) {
+          try {
+            const customerDoc = await customersCollection.doc(policy.customerId).get();
+            if (customerDoc.exists) {
+              const customerData = customerDoc.data();
+              customerDetails = {
+                customerName: customerData.customerName || policy.customerName || 'N/A',
+                phoneNumber: customerData.phoneNumber || policy.customerNumber || 'N/A',
+                email: customerData.email || 'N/A',
+                address: customerData.address || 'N/A',
+                city: customerData.city || 'N/A',
+                amount: policy.amount || customerData.amount || 'N/A'
+              };
+            }
+          } catch (error) {
+            console.log(`Error fetching customer details for policy ${policy.id}:`, error.message);
+          }
+        }
+
+        return {
+          ...policy,
+          ...customerDetails
+        };
+      })
+    );
+    
+    res.status(200).json(policiesWithCustomerDetails);
   } catch (err) {
     console.error('Error fetching all policies:', err);
     res.status(500).json({ error: err.message });
