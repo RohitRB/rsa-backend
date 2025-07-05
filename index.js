@@ -142,11 +142,20 @@ app.post('/api/payments/verify-and-save', async (req, res) => {
 
     // --- 3. Save Policy to Firestore ---
     const policiesCollection = db.collection('policies');
+    
+    // Calculate policy dates automatically
+    const purchaseDate = new Date(); // Current date as purchase date
+    const startDate = new Date(purchaseDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from purchase
+    const expiryDate = new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 year from start date
+    
     const newPolicyEntry = {
       ...policyData, // Use the policyData passed from frontend
       customerId: customerDocRef.id, // Link policy to customer
       customerName: customerData.customerName,
       vehicleNumber: customerData.vehicleNumber,
+      purchaseDate: purchaseDate, // Store purchase date
+      startDate: startDate, // Auto-calculated: 30 days from purchase
+      expiryDate: expiryDate, // Auto-calculated: 1 year from start date
       razorpay_payment_id,
       razorpay_order_id,
       status: 'Active', // Explicitly set status to Active on successful payment

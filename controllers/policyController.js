@@ -13,20 +13,26 @@ export const createPolicy = async (req, res) => { // <-- CHANGED: Export directl
     const policiesCollection = db.collection('policies');
     console.log('creating policy ');
 
+    // Calculate policy dates automatically
+    const purchaseDate = new Date(); // Current date as purchase date
+    const startDate = new Date(purchaseDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from purchase
+    const expiryDate = new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 year from start date
+
     const newPolicyData = {
       policyId: req.body.policyId,
       customerNumber: req.body.customerNumber,
       customerName: req.body.customerName,
       vehicleNumber: req.body.vehicleNumber,
-      startDate: new Date(req.body.startDate),
-      expiryDate: new Date(req.body.expiryDate),
+      purchaseDate: purchaseDate, // Store purchase date
+      startDate: startDate, // Auto-calculated: 30 days from purchase
+      expiryDate: expiryDate, // Auto-calculated: 1 year from start date
       status: req.body.status || 'Active',
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    if (!newPolicyData.policyId || !newPolicyData.customerNumber || !newPolicyData.customerName || !newPolicyData.vehicleNumber || !newPolicyData.startDate || !newPolicyData.expiryDate) {
-      return res.status(400).json({ error: 'Missing required policy fields: policyId, customerNumber, customerName, vehicleNumber, startDate, expiryDate.' });
+    if (!newPolicyData.policyId || !newPolicyData.customerNumber || !newPolicyData.customerName || !newPolicyData.vehicleNumber) {
+      return res.status(400).json({ error: 'Missing required policy fields: policyId, customerNumber, customerName, vehicleNumber.' });
     }
 
     const existingPolicy = await policiesCollection.where('policyId', '==', newPolicyData.policyId).limit(1).get();
@@ -37,7 +43,7 @@ export const createPolicy = async (req, res) => { // <-- CHANGED: Export directl
     const docRef = await policiesCollection.add(newPolicyData);
     const savedPolicy = { id: docRef.id, ...newPolicyData };
 
-    console.log("policy created");
+    console.log("policy created with auto-calculated dates");
     res.status(201).json(savedPolicy);
   } catch (err) {
     console.error('Error creating policy:', err);
@@ -163,19 +169,22 @@ export const finalizePolicy = async (req, res) => { // <-- CHANGED: Export direc
 
     const customerData = customerDoc.data();
 
-    const { policyNumber, expiryDate, paymentDate } = confirmationData;
+    const { policyNumber } = confirmationData;
     const { customerName, vehicleNumber } = customerData;
 
-    const durationYears = new Date(expiryDate).getFullYear() - new Date(paymentDate).getFullYear();
+    // Calculate policy dates automatically
+    const purchaseDate = new Date(); // Current date as purchase date
+    const startDate = new Date(purchaseDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from purchase
+    const expiryDate = new Date(startDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 year from start date
 
     const policyData = {
       policyId: policyNumber,
       customerNumber: customerData.phoneNumber, // Assuming phoneNumber is customerNumber
       customerName: customerName,
       vehicleNumber: vehicleNumber,
-      duration: `${durationYears} Years`,
-      startDate: paymentDate,
-      expiryDate: expiryDate,
+      purchaseDate: purchaseDate, // Store purchase date
+      startDate: startDate, // Auto-calculated: 30 days from purchase
+      expiryDate: expiryDate, // Auto-calculated: 1 year from start date
       status: req.body.status || "Active",
       createdAt: new Date(),
       updatedAt: new Date()
