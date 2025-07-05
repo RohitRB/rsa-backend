@@ -55,7 +55,11 @@ export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export direc
     }
 
     const policiesCollection = db.collection('policies');
-    const snapshot = await policiesCollection.orderBy('createdAt', 'desc').get();
+    // Only get active policies
+    const snapshot = await policiesCollection
+      .where('status', '==', 'Active')
+      .orderBy('createdAt', 'desc')
+      .get();
     const policies = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -221,7 +225,7 @@ export const updatePolicy = async (req, res) => { // <-- CHANGED: Export directl
   }
 };
 
-// ✅ 6. Delete policy by ID
+// ✅ 6. Delete policy by Policy Number (not document ID)
 export const deletePolicy = async (req, res) => {
   try {
     if (!db) {
@@ -231,20 +235,28 @@ export const deletePolicy = async (req, res) => {
     }
 
     const policiesCollection = db.collection('policies');
-    const policyId = req.params.id;
+    const policyNumber = req.params.id; // This is the policy number like "RSA-250703181340-114"
 
-    const policyDocRef = policiesCollection.doc(policyId);
-    const policyDoc = await policyDocRef.get();
+    // Find policy by policyId (policy number)
+    const policyQuery = await policiesCollection
+      .where('policyId', '==', policyNumber)
+      .limit(1)
+      .get();
 
-    if (!policyDoc.exists) {
-      return res.status(404).json({ message: 'Policy not found' });
+    if (policyQuery.empty) {
+      return res.status(404).json({ message: 'Policy not found. It may have already been deleted.' });
     }
 
-    await policyDocRef.delete();
+    const policyDoc = policyQuery.docs[0];
+    const policyId = policyDoc.id; // Get the Firestore document ID
+
+    // Delete the policy
+    await policiesCollection.doc(policyId).delete();
 
     res.status(200).json({ 
       message: 'Policy deleted successfully',
-      deletedPolicyId: policyId 
+      deletedPolicyId: policyId,
+      deletedPolicyNumber: policyNumber
     });
   } catch (err) {
     console.error('Error deleting policy:', err);
