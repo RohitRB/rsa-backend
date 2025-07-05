@@ -240,18 +240,90 @@ export const deletePolicy = async (req, res) => {
     const policiesCollection = db.collection('policies');
     const policyNumber = req.params.id; // This is the policy number like "RSA-250703181340-114"
 
-    // Find policy by policyId (policy number)
-    const policyQuery = await policiesCollection
+    console.log('🔍 Searching for policy with policyId:', policyNumber);
+
+    // First, let's get all policies to debug
+    const allPoliciesSnapshot = await policiesCollection.get();
+    const allPolicies = allPoliciesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    console.log('📊 Total policies in database:', allPolicies.length);
+    console.log('📋 Available policyIds:', allPolicies.map(p => p.policyId));
+    console.log('📋 Available policyNumbers:', allPolicies.map(p => p.policyNumber));
+    console.log('📋 Available policy_ids:', allPolicies.map(p => p.policy_id));
+
+    // Try to find policy by multiple possible field names
+    let policyQuery = await policiesCollection
       .where('policyId', '==', policyNumber)
       .limit(1)
       .get();
 
     if (policyQuery.empty) {
-      return res.status(404).json({ message: 'Policy not found. It may have already been deleted.' });
+      // Try policyNumber field
+      policyQuery = await policiesCollection
+        .where('policyNumber', '==', policyNumber)
+        .limit(1)
+        .get();
+    }
+
+    if (policyQuery.empty) {
+      // Try policy_id field
+      policyQuery = await policiesCollection
+        .where('policy_id', '==', policyNumber)
+        .limit(1)
+        .get();
+    }
+
+    if (policyQuery.empty) {
+      // Enhanced debugging - check all possible field names
+      const exactMatchPolicyId = allPolicies.find(p => p.policyId === policyNumber);
+      const exactMatchPolicyNumber = allPolicies.find(p => p.policyNumber === policyNumber);
+      const exactMatchPolicy_id = allPolicies.find(p => p.policy_id === policyNumber);
+      
+      const caseInsensitiveMatchPolicyId = allPolicies.find(p => 
+        p.policyId && p.policyId.toLowerCase() === policyNumber.toLowerCase()
+      );
+      const caseInsensitiveMatchPolicyNumber = allPolicies.find(p => 
+        p.policyNumber && p.policyNumber.toLowerCase() === policyNumber.toLowerCase()
+      );
+      
+      console.log('❌ Policy not found with any field name');
+      console.log('🔍 Exact match policyId:', exactMatchPolicyId ? 'Found' : 'Not found');
+      console.log('🔍 Exact match policyNumber:', exactMatchPolicyNumber ? 'Found' : 'Not found');
+      console.log('🔍 Exact match policy_id:', exactMatchPolicy_id ? 'Found' : 'Not found');
+      
+      // Return the first case-insensitive match if found
+      if (caseInsensitiveMatchPolicyId && !exactMatchPolicyId) {
+        return res.status(404).json({ 
+          message: 'Policy found but case mismatch in policyId field. Please check the exact policy ID.',
+          foundPolicyId: caseInsensitiveMatchPolicyId.policyId,
+          requestedPolicyId: policyNumber
+        });
+      }
+
+      if (caseInsensitiveMatchPolicyNumber && !exactMatchPolicyNumber) {
+        return res.status(404).json({ 
+          message: 'Policy found but case mismatch in policyNumber field. Please check the exact policy ID.',
+          foundPolicyNumber: caseInsensitiveMatchPolicyNumber.policyNumber,
+          requestedPolicyNumber: policyNumber
+        });
+      }
+
+      return res.status(404).json({ 
+        message: 'Policy not found. It may have already been deleted.',
+        searchedPolicyId: policyNumber,
+        availablePolicyIds: allPolicies.map(p => p.policyId).filter(Boolean),
+        availablePolicyNumbers: allPolicies.map(p => p.policyNumber).filter(Boolean),
+        availablePolicy_ids: allPolicies.map(p => p.policy_id).filter(Boolean)
+      });
     }
 
     const policyDoc = policyQuery.docs[0];
     const policyId = policyDoc.id; // Get the Firestore document ID
+
+    console.log('✅ Policy found:', policyDoc.data());
 
     // Delete the policy
     await policiesCollection.doc(policyId).delete();
@@ -294,6 +366,66 @@ export const getAllPoliciesDebug = async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching all policies (debug):', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ 8. Find specific policy by policyId for debugging
+export const findPolicyById = async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
+    const policyNumber = req.params.id;
+
+    console.log('🔍 Searching for policy with policyId:', policyNumber);
+
+    // Get all policies to debug
+    const allPoliciesSnapshot = await policiesCollection.get();
+    const allPolicies = allPoliciesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Find exact match in different field names
+    const exactMatchPolicyId = allPolicies.find(p => p.policyId === policyNumber);
+    const exactMatchPolicyNumber = allPolicies.find(p => p.policyNumber === policyNumber);
+    const exactMatchPolicy_id = allPolicies.find(p => p.policy_id === policyNumber);
+    
+    // Find case-insensitive match
+    const caseInsensitiveMatchPolicyId = allPolicies.find(p => 
+      p.policyId && p.policyId.toLowerCase() === policyNumber.toLowerCase()
+    );
+    const caseInsensitiveMatchPolicyNumber = allPolicies.find(p => 
+      p.policyNumber && p.policyNumber.toLowerCase() === policyNumber.toLowerCase()
+    );
+
+    // Find partial match
+    const partialMatches = allPolicies.filter(p => 
+      (p.policyId && p.policyId.includes(policyNumber)) ||
+      (p.policyNumber && p.policyNumber.includes(policyNumber)) ||
+      (p.policy_id && p.policy_id.includes(policyNumber))
+    );
+
+    res.status(200).json({
+      searchedPolicyId: policyNumber,
+      totalPolicies: allPolicies.length,
+      exactMatchPolicyId: exactMatchPolicyId || null,
+      exactMatchPolicyNumber: exactMatchPolicyNumber || null,
+      exactMatchPolicy_id: exactMatchPolicy_id || null,
+      caseInsensitiveMatchPolicyId: caseInsensitiveMatchPolicyId || null,
+      caseInsensitiveMatchPolicyNumber: caseInsensitiveMatchPolicyNumber || null,
+      partialMatches: partialMatches,
+      allPolicyIds: allPolicies.map(p => p.policyId).filter(Boolean),
+      allPolicyNumbers: allPolicies.map(p => p.policyNumber).filter(Boolean),
+      allPolicy_ids: allPolicies.map(p => p.policy_id).filter(Boolean)
+    });
+  } catch (err) {
+    console.error('Error finding policy:', err);
     res.status(500).json({ error: err.message });
   }
 };

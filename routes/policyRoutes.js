@@ -7,7 +7,8 @@ import { // <-- CHANGED: Direct import of functions
   finalizePolicy,
   updatePolicy,
   deletePolicy,
-  getAllPoliciesDebug
+  getAllPoliciesDebug,
+  findPolicyById
 } from '../controllers/policyController.js'; // <-- CHANGED: No longer passing db here
 
 const router = express.Router();
@@ -15,6 +16,7 @@ const router = express.Router();
 router.post('/', createPolicy);
 router.get('/', getAllPolicies);
 router.get('/debug', getAllPoliciesDebug); // Debug endpoint
+router.get('/find/:id', findPolicyById); // Find specific policy
 router.get('/preview/:id', getPolicyPreview);
 router.post('/finalize/:id', finalizePolicy);
 router.put('/:id', updatePolicy);
