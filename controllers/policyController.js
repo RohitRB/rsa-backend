@@ -55,15 +55,18 @@ export const getAllPolicies = async (req, res) => { // <-- CHANGED: Export direc
     }
 
     const policiesCollection = db.collection('policies');
-    // Only get active policies
+    // Get all policies and filter active ones in memory to avoid index requirement
     const snapshot = await policiesCollection
-      .where('status', '==', 'Active')
       .orderBy('createdAt', 'desc')
       .get();
-    const policies = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    
+    const policies = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      .filter(policy => policy.status === 'Active'); // Filter active policies in memory
+    
     res.status(200).json(policies);
   } catch (err) {
     console.error('Error fetching all policies:', err);
@@ -260,6 +263,37 @@ export const deletePolicy = async (req, res) => {
     });
   } catch (err) {
     console.error('Error deleting policy:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ 7. Debug: Get all policies (including inactive) for troubleshooting
+export const getAllPoliciesDebug = async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ 
+        error: 'Database service is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.' 
+      });
+    }
+
+    const policiesCollection = db.collection('policies');
+    const snapshot = await policiesCollection
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    const policies = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    res.status(200).json({
+      totalPolicies: policies.length,
+      activePolicies: policies.filter(p => p.status === 'Active').length,
+      inactivePolicies: policies.filter(p => p.status !== 'Active').length,
+      policies: policies
+    });
+  } catch (err) {
+    console.error('Error fetching all policies (debug):', err);
     res.status(500).json({ error: err.message });
   }
 };
